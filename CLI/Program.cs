@@ -1,6 +1,5 @@
 ﻿using System;
 using CommandLine;
-using CommandLine.Text;
 using Calc = DefiCalc.Core.Main;
 
 namespace DefiCalc.CLI
