@@ -1,4 +1,6 @@
 ﻿using System;
+using CommandLine;
+using CommandLine.Text;
 using Calc = DefiCalc.Core.Main;
 
 namespace DefiCalc.CLI
@@ -7,35 +9,34 @@ namespace DefiCalc.CLI
     {
         public static void Main(string[] args)
         {
-            var date = DateTime.Now.AddMonths(12);
-            var days = (int) Math.Ceiling((date - DateTime.Today).TotalDays) - 1;
-            const int reinvestmentPeriod = 14;
-            const double reinvestmentAmount = 0D;
-            const int reinvestmentOffset = 3;
-            const double initialPrinciple = 100D;
-
-            Calc.DayCalculated += (_, eventArgs) =>
+            var result = Parser.Default.ParseArguments<CLIArgs>(args);
+            result.WithParsed(cliArgs =>
             {
-                if (initialPrinciple < 500)
-                    Console.WriteLine(
-                        "Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Pending Withdraw: ${3:N2}, Amount Withdrawn: ${4:N2}, Total: ${5:N2}",
-                        eventArgs.Day, eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AmountPendingWithdraw,
-                        eventArgs.AmountWithdrawn, eventArgs.Total);
-                else
-                    Console.WriteLine("Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}", eventArgs.Day,
-                        eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
-            };
-            
-            Console.WriteLine("-----Initial Values----------------");
-            Console.WriteLine("Days: {0}", days);
-            Console.WriteLine("Reinvestment Period: {0} days", reinvestmentPeriod);
-            Console.WriteLine("Reinvestment Offset: {0} days", reinvestmentOffset);
-            Console.WriteLine("Reinvestment Amount: ${0:N2}", reinvestmentAmount);
-            Console.WriteLine("Initial Principle (PV): ${0:N2}", initialPrinciple);
-            Console.WriteLine("-----------------------------------");
-            var total = Calc.Calc(days, reinvestmentPeriod, reinvestmentAmount, reinvestmentOffset, initialPrinciple);
-            Console.WriteLine("-----------------------------------");
-            Console.WriteLine("Total: ${0:N2}", total);
+                Calc.DayCalculated += (_, eventArgs) =>
+                {
+                    if (cliArgs.InitialPrinciple < 500)
+                        Console.WriteLine(
+                            "Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Pending Withdraw: ${3:N2}, Amount Withdrawn: ${4:N2}, Total: ${5:N2}",
+                            eventArgs.Day, eventArgs.InterestRate, eventArgs.AmountToAdd,
+                            eventArgs.AmountPendingWithdraw,
+                            eventArgs.AmountWithdrawn, eventArgs.Total);
+                    else
+                        Console.WriteLine("Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}", eventArgs.Day,
+                            eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
+                };
+
+                Console.WriteLine("-----Initial Values----------------");
+                Console.WriteLine("Days: {0}", cliArgs.Days);
+                Console.WriteLine("Reinvestment Period: {0} days", cliArgs.ReinvestmentPeriod);
+                Console.WriteLine("Reinvestment Offset: {0} days", cliArgs.ReinvestmentOffset);
+                Console.WriteLine("Reinvestment Amount: ${0:N2}", cliArgs.ReinvestmentAmount);
+                Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
+                Console.WriteLine("-----------------------------------");
+                var total = Calc.Calc(cliArgs.Days, cliArgs.ReinvestmentPeriod, cliArgs.ReinvestmentAmount,
+                    cliArgs.ReinvestmentOffset, cliArgs.InitialPrinciple);
+                Console.WriteLine("-----------------------------------");
+                Console.WriteLine("Total: ${0:N2}", total);
+            });
         }
     }
 }
