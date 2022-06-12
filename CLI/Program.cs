@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using CommandLine;
 using Calc = DefiCalc.Core.Main;
 
@@ -22,6 +23,16 @@ namespace DefiCalc.CLI
                     else
                         Console.WriteLine("Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}", eventArgs.Day,
                             eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
+                };
+
+                Calc.DateChanged += (_, date) =>
+                {
+                    var c = CultureInfo.CurrentCulture.Calendar;
+                    var yest = date.AddDays(-1);
+                    if (yest == DateTime.Today) return;
+                    var days = c.GetDaysInMonth(yest.Year, yest.Month);
+                    if (yest.Day == DateTime.Today.Day || (DateTime.Today.Day > days && yest.Day == days))
+                        Console.WriteLine("------------{0:yyyy-MM-dd}-------------", yest);
                 };
 
                 Console.WriteLine("-----Initial Values----------------");
