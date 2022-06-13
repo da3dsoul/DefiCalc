@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using CommandLine;
+using DefiCalc.Core;
 using Calc = DefiCalc.Core.Main;
 
 namespace DefiCalc.CLI
@@ -9,6 +11,27 @@ namespace DefiCalc.CLI
     {
         public static void Main(string[] args)
         {
+            var schedule = new List<InvestmentSchedule>
+            {
+                new()
+                {
+                    Amount = 1000,
+                    StartDate = new DateTime(2022, 6, 14),
+                    EndDate = new DateTime(2022, 6, 15)
+                },
+                new()
+                {
+                    Amount = 500,
+                    StartDate = new DateTime(2022, 7, 12),
+                    Period = 14
+                },
+                new()
+                {
+                    Amount = 500,
+                    StartDate = new DateTime(2022, 8, 9),
+                    Period = 14
+                }
+            };
             var result = Parser.Default.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
@@ -42,8 +65,7 @@ namespace DefiCalc.CLI
                 Console.WriteLine("Reinvestment Amount: ${0:N2}", cliArgs.ReinvestmentAmount);
                 Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
                 Console.WriteLine("-----------------------------------");
-                var total = Calc.Calc(cliArgs.Days, cliArgs.ReinvestmentPeriod, cliArgs.ReinvestmentAmount,
-                    cliArgs.ReinvestmentOffset, cliArgs.InitialPrinciple);
+                var total = Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, schedule);
                 Console.WriteLine("-----------------------------------");
                 Console.WriteLine("Total: ${0:N2}", total);
             });

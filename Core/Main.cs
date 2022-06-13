@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace DefiCalc.Core
 {
@@ -6,14 +7,30 @@ namespace DefiCalc.Core
     {
         public static EventHandler<DayCalculatedEventArgs> DayCalculated;
         public static EventHandler<DateTime> DateChanged;
-        public static double Calc(int days, int reinvestmentPeriod, double reinvestmentAmount, int reinvestmentOffset, double initialPrinciple)
+
+        public static double Calc(int days, int reinvestmentPeriod, double reinvestmentAmount, int reinvestmentOffset,
+            double initialPrinciple)
+        {
+            return Calc(days, initialPrinciple,
+                new List<InvestmentSchedule>
+                {
+                    new()
+                    {
+                        Amount = reinvestmentAmount, Period = reinvestmentPeriod,
+                        StartDate = DateTime.Today.AddDays(reinvestmentOffset)
+                    }
+                });
+        }
+
+        public static double Calc(int days, double initialPrinciple, List<InvestmentSchedule> schedules)
         {
             var total = initialPrinciple;
             var simple = 0D;
 
             for (var i = 0; i < days; i++)
             {
-                DateChanged?.Invoke(null, DateTime.Today + TimeSpan.FromDays(i+1));
+                var date = DateTime.Today.AddDays(i + 1);
+                DateChanged?.Invoke(null, date);
                 var interest = GetInterestRate(total);
                 var add = total * interest;
                 var withdrawn = 0D;
@@ -26,10 +43,11 @@ namespace DefiCalc.Core
                 else
                     simple += add;
 
-                // we do this at the end of the day, as it does apply until the next period
-                if (i >= reinvestmentOffset && (i - reinvestmentOffset) % reinvestmentPeriod == 0)
+                foreach (var schedule in schedules)
                 {
-                    total += reinvestmentAmount;
+                    if (date < schedule.StartDate || (schedule.EndDate != null && date >= schedule.EndDate.Value)) continue;
+                    if (schedule.Period != 0 && (date - schedule.StartDate).TotalDays % schedule.Period != 0) continue;
+                    total += schedule.Amount;
                 }
 
                 total = Math.Round(total, 2, MidpointRounding.AwayFromZero);
