@@ -43,12 +43,15 @@ namespace DefiCalc.Core
                 else
                     simple += add;
 
+                var additional = 0D;
                 foreach (var schedule in schedules)
                 {
                     if (date < schedule.StartDate || (schedule.EndDate != null && date >= schedule.EndDate.Value)) continue;
                     if (schedule.Period != 0 && (date - schedule.StartDate).TotalDays % schedule.Period != 0) continue;
-                    total += schedule.Amount;
+                    additional += schedule.Amount;
                 }
+
+                total += additional;
 
                 total = Math.Round(total, 2, MidpointRounding.AwayFromZero);
                 DayCalculated?.Invoke(null, new DayCalculatedEventArgs
@@ -58,6 +61,7 @@ namespace DefiCalc.Core
                     AmountToAdd = add,
                     AmountPendingWithdraw = simple,
                     AmountWithdrawn = withdrawn,
+                    AdditionalInvestment = additional, 
                     Total = total
                 });
             }

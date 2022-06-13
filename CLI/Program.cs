@@ -23,7 +23,7 @@ namespace DefiCalc.CLI
                 {
                     Amount = 500,
                     StartDate = new DateTime(2022, 7, 12),
-                    Period = 14
+                    Period = 28
                 },
                 new()
                 {
@@ -44,18 +44,23 @@ namespace DefiCalc.CLI
                             eventArgs.AmountPendingWithdraw,
                             eventArgs.AmountWithdrawn, eventArgs.Total);
                     else
-                        Console.WriteLine("Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}", eventArgs.Day,
-                            eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
+                    {
+                        if (schedule.Count > 0)
+                            Console.WriteLine("Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}", eventArgs.Day,
+                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment, eventArgs.Total);
+                        else
+                            Console.WriteLine("Day: {0:D3}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}", eventArgs.Day,
+                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
+                    }
                 };
 
                 Calc.DateChanged += (_, date) =>
                 {
                     var c = CultureInfo.CurrentCulture.Calendar;
-                    var yest = date.AddDays(-1);
-                    if (yest == DateTime.Today) return;
-                    var days = c.GetDaysInMonth(yest.Year, yest.Month);
-                    if (yest.Day == DateTime.Today.Day || (DateTime.Today.Day > days && yest.Day == days))
-                        Console.WriteLine("------------{0:yyyy-MM-dd}-------------", yest);
+                    if (date == DateTime.Today) return;
+                    var days = c.GetDaysInMonth(date.Year, date.Month);
+                    if (date.Day == DateTime.Today.Day || (DateTime.Today.Day > days && date.Day == days))
+                        Console.WriteLine("------------{0:yyyy-MM-dd}-------------", date);
                 };
 
                 Console.WriteLine("-----Initial Values----------------");
