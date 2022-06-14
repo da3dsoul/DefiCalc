@@ -20,5 +20,9 @@ namespace DefiCalc.Core
         /// Amount to invest
         /// </summary>
         public double Amount { get; set; }
+        /// <summary>
+        /// Amount to Withdraw
+        /// </summary>
+        public double WithdrawAmount { get; set; }
     }
 }

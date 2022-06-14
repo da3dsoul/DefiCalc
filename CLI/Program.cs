@@ -38,17 +38,17 @@ namespace DefiCalc.CLI
                 {
                     if (cliArgs.InitialPrinciple < 500)
                         Console.WriteLine(
-                            "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Pending Withdraw: ${3:N2}, Amount Withdrawn: ${4:N2}, Total: ${5:N2}",
+                            "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Pending Extraction: ${3:N2}, Amount Extracted: ${4:N2}, Total: ${5:N2}",
                             DateTime.Today.AddDays(eventArgs.Day), eventArgs.InterestRate, eventArgs.AmountToAdd,
-                            eventArgs.AmountPendingWithdraw,
-                            eventArgs.AmountWithdrawn, eventArgs.Total);
+                            eventArgs.AmountPendingExtraction,
+                            eventArgs.AmountExtracted, eventArgs.Total);
                     else
                     {
                         if (schedules.Count > 0)
                             Console.WriteLine(
                                 "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}",
                                 DateTime.Today.AddDays(eventArgs.Day),
-                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment,
+                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment - eventArgs.AmountWithdrawn,
                                 eventArgs.Total);
                         else
                             Console.WriteLine(
@@ -76,7 +76,10 @@ namespace DefiCalc.CLI
                     Console.WriteLine("-----------------------------------");
                 foreach (var investmentSchedule in schedules)
                 {
-                    Console.WriteLine("  Amount: ${0:N2}", investmentSchedule.Amount);
+                    if (investmentSchedule.Amount > 0)
+                        Console.WriteLine("  Amount: ${0:N2}", investmentSchedule.Amount);
+                    if (investmentSchedule.WithdrawAmount > 0)
+                        Console.WriteLine("  Withdraw Amount: ${0:N2}", investmentSchedule.WithdrawAmount);
                     Console.WriteLine("  Start Date: {0:yyyy-MM-dd}", investmentSchedule.StartDate);
                     if (investmentSchedule.Period != 0)
                         Console.WriteLine("  Period: {0} days", investmentSchedule.Period);

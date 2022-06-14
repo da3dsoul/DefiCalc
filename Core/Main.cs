@@ -8,20 +8,6 @@ namespace DefiCalc.Core
         public static EventHandler<DayCalculatedEventArgs> DayCalculated;
         public static EventHandler<DateTime> DateChanged;
 
-        public static double Calc(int days, int reinvestmentPeriod, double reinvestmentAmount, int reinvestmentOffset,
-            double initialPrinciple)
-        {
-            return Calc(days, initialPrinciple,
-                new List<InvestmentSchedule>
-                {
-                    new()
-                    {
-                        Amount = reinvestmentAmount, Period = reinvestmentPeriod,
-                        StartDate = DateTime.Today.AddDays(reinvestmentOffset)
-                    }
-                });
-        }
-
         public static double Calc(int days, double initialPrinciple, List<InvestmentSchedule> schedules)
         {
             var total = initialPrinciple;
@@ -33,25 +19,29 @@ namespace DefiCalc.Core
                 DateChanged?.Invoke(null, date);
                 var interest = GetInterestRate(total);
                 var add = total * interest;
-                var withdrawn = 0D;
+                var extracted = 0D;
                 if (add + simple >= 10D)
                 {
                     total += add + simple;
-                    withdrawn = add + simple;
+                    extracted = add + simple;
                     simple = 0D;
                 }
                 else
                     simple += add;
 
                 var additional = 0D;
+                var withdrawn = 0D;
                 foreach (var schedule in schedules)
                 {
                     if (date < schedule.StartDate || (schedule.EndDate != null && date >= schedule.EndDate.Value)) continue;
                     if (schedule.Period != 0 && (date - schedule.StartDate).TotalDays % schedule.Period != 0) continue;
+                    if (schedule.Period == 0 && date != schedule.StartDate) continue;
                     additional += schedule.Amount;
+                    withdrawn += schedule.WithdrawAmount;
                 }
 
                 total += additional;
+                total -= withdrawn;
 
                 total = Math.Round(total, 2, MidpointRounding.AwayFromZero);
                 DayCalculated?.Invoke(null, new DayCalculatedEventArgs
@@ -59,7 +49,8 @@ namespace DefiCalc.Core
                     Day = i + 1,
                     InterestRate = interest,
                     AmountToAdd = add,
-                    AmountPendingWithdraw = simple,
+                    AmountPendingExtraction = simple,
+                    AmountExtracted = extracted,
                     AmountWithdrawn = withdrawn,
                     AdditionalInvestment = additional, 
                     Total = total
