@@ -90,7 +90,30 @@ namespace DefiCalc.CLI
 
                 var total = Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, schedules);
                 Console.WriteLine("-----------------------------------");
-                Console.WriteLine("Total: ${0:N2}", total);
+                Console.WriteLine("Subtotal:      ${0:N2}", total);
+                var taxRate = 0.24D;
+                var flatTax = 14751D;
+                if (total < 209425)
+                {
+                    taxRate = 0.32D;
+                    flatTax = 33603D;
+                }
+                else if (total < 523600)
+                {
+                    taxRate = 0.35D;
+                    flatTax = 47843D;
+                }
+                else
+                {
+                    taxRate = 0.37D;
+                    flatTax = 157804.25D;
+                }
+
+                var taxes = total * taxRate + flatTax;
+                Console.WriteLine("Tax:           ${0:N2}", taxes);
+                var coinbase = total * 0.01D + 4.95D;
+                Console.WriteLine("Coinbase Fees: ${0:N2}", coinbase);
+                Console.WriteLine("Total:         ${0:N2}", total - taxes - coinbase);
             });
         }
     }
