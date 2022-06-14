@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CommandLine;
 using DefiCalc.Core;
 using Calc = DefiCalc.Core.Main;
@@ -18,6 +17,7 @@ namespace DefiCalc.CLI
             var result = Parser.Default.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
+                var schedules1 = schedules;
                 Calc.DayCalculated += (_, eventArgs) =>
                 {
                     if (cliArgs.InitialPrinciple < 500)
@@ -28,14 +28,15 @@ namespace DefiCalc.CLI
                             eventArgs.AmountWithdrawn, eventArgs.Total);
                     else
                     {
-                        if (schedules.Count > 0)
+                        if (schedules1.Count > 0)
                             Console.WriteLine(
                                 "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}",
                                 DateTime.Today.AddDays(eventArgs.Day),
                                 eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment,
                                 eventArgs.Total);
                         else
-                            Console.WriteLine("Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}",
+                            Console.WriteLine(
+                                "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}",
                                 DateTime.Today.AddDays(eventArgs.Day),
                                 eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
                     }
