@@ -91,25 +91,55 @@ namespace DefiCalc.CLI
                 var total = Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, schedules);
                 Console.WriteLine("-----------------------------------");
                 Console.WriteLine("Subtotal:      ${0:N2}", total);
-                var taxRate = 0.24D;
-                var flatTax = 14751D;
-                if (total < 209425)
+                double taxRate;
+                double flatTax;
+                const double bracket1 = 10275D;
+                const double bracket2 = 41775D;
+                const double bracket3 = 89075D;
+                const double bracket4 = 170050D;
+                const double bracket5 = 215950D;
+                const double bracket6 = 539900D;
+                double bracket;
+                switch (total)
                 {
-                    taxRate = 0.32D;
-                    flatTax = 33603D;
-                }
-                else if (total < 523600)
-                {
-                    taxRate = 0.35D;
-                    flatTax = 47843D;
-                }
-                else
-                {
-                    taxRate = 0.37D;
-                    flatTax = 157804.25D;
+                    case > bracket6:
+                        taxRate = 0.37D;
+                        flatTax = 162718D;
+                        bracket = bracket6;
+                        break;
+                    case > bracket5:
+                        taxRate = 0.35D;
+                        flatTax = 49335.50D;
+                        bracket = bracket5;
+                        break;
+                    case > bracket4:
+                        taxRate = 0.32D;
+                        flatTax = 34647.50D;
+                        bracket = bracket4;
+                        break;
+                    case > bracket3:
+                        taxRate = 0.24D;
+                        flatTax = 15213.50D;
+                        bracket = bracket3;
+                        break;
+                    case > bracket2:
+                        taxRate = 0.22D;
+                        flatTax = 4807.50D;
+                        bracket = bracket2;
+                        break;
+                    case > bracket1:
+                        taxRate = 0.12D;
+                        flatTax = 1027.50D;
+                        bracket = bracket1;
+                        break;
+                    default:
+                        taxRate = 0.10D;
+                        flatTax = 0D;
+                        bracket = 0D;
+                        break;
                 }
 
-                var taxes = total * taxRate + flatTax;
+                var taxes = (total - bracket) * taxRate + flatTax;
                 Console.WriteLine("Tax:           ${0:N2}", taxes);
                 var coinbase = total * 0.01D + 4.95D;
                 Console.WriteLine("Coinbase Fees: ${0:N2}", coinbase);
