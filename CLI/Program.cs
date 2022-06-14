@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CommandLine;
 using DefiCalc.Core;
 using Calc = DefiCalc.Core.Main;
@@ -11,21 +14,7 @@ namespace DefiCalc.CLI
     {
         public static void Main(string[] args)
         {
-            var schedule = new List<InvestmentSchedule>
-            {
-                new()
-                {
-                    Amount = 500,
-                    StartDate = new DateTime(2022, 7, 12),
-                    Period = 28
-                },
-                new()
-                {
-                    Amount = 480,
-                    StartDate = new DateTime(2022, 8, 9),
-                    Period = 14
-                }
-            };
+            var schedules = new List<InvestmentSchedule>();
             var result = Parser.Default.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
@@ -39,11 +28,15 @@ namespace DefiCalc.CLI
                             eventArgs.AmountWithdrawn, eventArgs.Total);
                     else
                     {
-                        if (schedule.Count > 0)
-                            Console.WriteLine("Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}", DateTime.Today.AddDays(eventArgs.Day),
-                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment, eventArgs.Total);
+                        if (schedules.Count > 0)
+                            Console.WriteLine(
+                                "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}",
+                                DateTime.Today.AddDays(eventArgs.Day),
+                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment,
+                                eventArgs.Total);
                         else
-                            Console.WriteLine("Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}", DateTime.Today.AddDays(eventArgs.Day),
+                            Console.WriteLine("Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}",
+                                DateTime.Today.AddDays(eventArgs.Day),
                                 eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
                     }
                 };
@@ -57,14 +50,28 @@ namespace DefiCalc.CLI
                         Console.WriteLine("------------{0:yyyy-MM-dd}-------------", date);
                 };
 
+                if (cliArgs.SchedulePath == null)
+                {
+                    schedules.Add(new()
+                    {
+                        Amount = cliArgs.ReinvestmentAmount, Period = cliArgs.ReinvestmentPeriod,
+                        StartDate = DateTime.Today.AddDays(cliArgs.ReinvestmentOffset)
+                    });
+                }
+                else
+                {
+                    schedules = JsonSerializer.Deserialize<List<InvestmentSchedule>>(
+                        File.ReadAllText(cliArgs.SchedulePath)) ?? new List<InvestmentSchedule>();
+                }
+
                 Console.WriteLine("-----------Settings----------------");
                 Console.WriteLine("Days: {0}", cliArgs.Days);
                 Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
-                if (schedule.Count > 0)
+                if (schedules.Count > 0)
                     Console.WriteLine("-----------Schedule----------------");
                 else
                     Console.WriteLine("-----------------------------------");
-                foreach (var investmentSchedule in schedule)
+                foreach (var investmentSchedule in schedules)
                 {
                     Console.WriteLine("  Amount: ${0:N2}", investmentSchedule.Amount);
                     Console.WriteLine("  Start Date: {0:yyyy-MM-dd}", investmentSchedule.StartDate);
@@ -75,7 +82,7 @@ namespace DefiCalc.CLI
                     Console.WriteLine("-----------------------------------");
                 }
 
-                var total = Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, schedule);
+                var total = Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, schedules);
                 Console.WriteLine("-----------------------------------");
                 Console.WriteLine("Total: ${0:N2}", total);
             });

@@ -18,5 +18,8 @@ namespace DefiCalc.CLI
 
         [Option(HelpText = "Initial Investment Amount")]
         public double InitialPrinciple { get; set; }
+        
+        [Option(HelpText = "Path to a json with the schedule")]
+        public string SchedulePath { get; set; }
     }
 }
