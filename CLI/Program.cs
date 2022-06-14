@@ -13,11 +13,27 @@ namespace DefiCalc.CLI
     {
         public static void Main(string[] args)
         {
-            var schedules = new List<InvestmentSchedule>();
             var result = Parser.Default.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
-                var schedules1 = schedules;
+                List<InvestmentSchedule> schedules;
+                if (cliArgs.SchedulePath == null)
+                {
+                    schedules = new List<InvestmentSchedule>
+                    {
+                        new()
+                        {
+                            Amount = cliArgs.ReinvestmentAmount, Period = cliArgs.ReinvestmentPeriod,
+                            StartDate = DateTime.Today.AddDays(cliArgs.ReinvestmentOffset)
+                        }
+                    };
+                }
+                else
+                {
+                    schedules = JsonSerializer.Deserialize<List<InvestmentSchedule>>(
+                        File.ReadAllText(cliArgs.SchedulePath)) ?? new List<InvestmentSchedule>();
+                }
+
                 Calc.DayCalculated += (_, eventArgs) =>
                 {
                     if (cliArgs.InitialPrinciple < 500)
@@ -28,7 +44,7 @@ namespace DefiCalc.CLI
                             eventArgs.AmountWithdrawn, eventArgs.Total);
                     else
                     {
-                        if (schedules1.Count > 0)
+                        if (schedules.Count > 0)
                             Console.WriteLine(
                                 "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}",
                                 DateTime.Today.AddDays(eventArgs.Day),
@@ -50,20 +66,6 @@ namespace DefiCalc.CLI
                     if (date.Day == DateTime.Today.Day || (DateTime.Today.Day > days && date.Day == days))
                         Console.WriteLine("------------{0:yyyy-MM-dd}-------------", date);
                 };
-
-                if (cliArgs.SchedulePath == null)
-                {
-                    schedules.Add(new()
-                    {
-                        Amount = cliArgs.ReinvestmentAmount, Period = cliArgs.ReinvestmentPeriod,
-                        StartDate = DateTime.Today.AddDays(cliArgs.ReinvestmentOffset)
-                    });
-                }
-                else
-                {
-                    schedules = JsonSerializer.Deserialize<List<InvestmentSchedule>>(
-                        File.ReadAllText(cliArgs.SchedulePath)) ?? new List<InvestmentSchedule>();
-                }
 
                 Console.WriteLine("-----------Settings----------------");
                 Console.WriteLine("Days: {0}", cliArgs.Days);
