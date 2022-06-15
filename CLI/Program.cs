@@ -74,6 +74,7 @@ namespace DefiCalc.CLI
                 };
 
                 Console.WriteLine("-----------Settings----------------");
+                Console.WriteLine("Start Date: {0:yyyy-MM-dd}", startDate);
                 Console.WriteLine("Days: {0}", cliArgs.Days);
                 Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
                 if (cliArgs.InitialInvestment != cliArgs.InitialPrinciple)
