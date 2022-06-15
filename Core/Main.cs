@@ -8,7 +8,7 @@ namespace DefiCalc.Core
         public static EventHandler<DayCalculatedEventArgs> DayCalculated;
         public static EventHandler<DateTime> DateChanged;
 
-        public static double Calc(int days, double initialPrinciple, double initialInvestment, List<InvestmentSchedule> schedules)
+        public static double Calc(DateTime startDate, int days, double initialPrinciple, double initialInvestment, List<InvestmentSchedule> schedules)
         {
             var total = initialPrinciple;
             var simple = 0D;
@@ -16,7 +16,7 @@ namespace DefiCalc.Core
 
             for (var i = 0; i < days; i++)
             {
-                var date = DateTime.Today.AddDays(i + 1);
+                var date = startDate.AddDays(i + 1);
                 DateChanged?.Invoke(null, date);
                 var interest = GetInterestRate(total);
                 var add = total * interest;

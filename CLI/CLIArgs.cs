@@ -1,9 +1,12 @@
-﻿using CommandLine;
+﻿using System;
+using CommandLine;
 
 namespace DefiCalc.CLI
 {
     public class CLIArgs
     {
+        [Option(HelpText = "The date to start calculating from")]
+        public DateTime? StartDate { get; set; }
         [Option(HelpText = "The number of days to forecast", Required = true)]
         public int Days { get; set; }
 

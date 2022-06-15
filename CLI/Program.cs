@@ -16,6 +16,7 @@ namespace DefiCalc.CLI
             var result = Parser.Default.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
+                var startDate = cliArgs.StartDate ?? DateTime.Today;
                 if (cliArgs.InitialInvestment == 0) cliArgs.InitialInvestment = cliArgs.InitialPrinciple;
                 List<InvestmentSchedule> schedules;
                 if (cliArgs.SchedulePath == null)
@@ -25,7 +26,7 @@ namespace DefiCalc.CLI
                         new()
                         {
                             Amount = cliArgs.ReinvestmentAmount, Period = cliArgs.ReinvestmentPeriod,
-                            StartDate = DateTime.Today.AddDays(cliArgs.ReinvestmentOffset)
+                            StartDate = startDate.AddDays(cliArgs.ReinvestmentOffset)
                         }
                     };
                 }
@@ -42,7 +43,7 @@ namespace DefiCalc.CLI
                     if (cliArgs.InitialPrinciple < 500)
                         Console.WriteLine(
                             "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Pending Extraction: ${3:N2} | Amount Extracted: ${4:N2} | Subtotal: ${5:N2} | Taxes: ${6:N2} | Fees: ${7:N2} | Total: ${8:N2}",
-                            DateTime.Today.AddDays(eventArgs.Day), eventArgs.InterestRate, eventArgs.AmountToAdd,
+                            startDate.AddDays(eventArgs.Day), eventArgs.InterestRate, eventArgs.AmountToAdd,
                             eventArgs.AmountPendingExtraction,
                             eventArgs.AmountExtracted, eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                     else
@@ -50,13 +51,13 @@ namespace DefiCalc.CLI
                         if (schedules.Count > 0)
                             Console.WriteLine(
                                 "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Additional Investment: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
-                                DateTime.Today.AddDays(eventArgs.Day),
+                                startDate.AddDays(eventArgs.Day),
                                 eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment - eventArgs.AmountWithdrawn,
                                 eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                         else
                             Console.WriteLine(
                                 "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Subtotal: ${3:N2} | Taxes: ${4:N2} | Fees: ${5:N2} | Total: ${6:N2}",
-                                DateTime.Today.AddDays(eventArgs.Day),
+                                startDate.AddDays(eventArgs.Day),
                                 eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                     }
 
@@ -66,9 +67,9 @@ namespace DefiCalc.CLI
                 Calc.DateChanged += (_, date) =>
                 {
                     var c = CultureInfo.CurrentCulture.Calendar;
-                    if (date == DateTime.Today) return;
+                    if (date == startDate) return;
                     var days = c.GetDaysInMonth(date.Year, date.Month);
-                    if (date.Day == DateTime.Today.Day || (DateTime.Today.Day > days && date.Day == days))
+                    if (date.Day == startDate.Day || (startDate.Day > days && date.Day == days))
                         Console.WriteLine("------------{0:yyyy-MM-dd}-------------", date);
                 };
 
@@ -95,7 +96,7 @@ namespace DefiCalc.CLI
                     Console.WriteLine("-----------------------------------");
                 }
 
-                Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, schedules);
+                Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, schedules);
                 Console.WriteLine("-----------------------------------");
                 Console.WriteLine("Subtotal:      ${0:N2}", last.Subtotal);
                 Console.WriteLine("Tax:           ${0:N2}", last.Taxes);
