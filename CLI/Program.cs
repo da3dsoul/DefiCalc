@@ -16,6 +16,7 @@ namespace DefiCalc.CLI
             var result = Parser.Default.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
+                if (cliArgs.InitialInvestment == 0) cliArgs.InitialInvestment = cliArgs.InitialPrinciple;
                 List<InvestmentSchedule> schedules;
                 if (cliArgs.SchedulePath == null)
                 {
@@ -34,28 +35,32 @@ namespace DefiCalc.CLI
                         File.ReadAllText(cliArgs.SchedulePath)) ?? new List<InvestmentSchedule>();
                 }
 
+                DayCalculatedEventArgs last = null;
+
                 Calc.DayCalculated += (_, eventArgs) =>
                 {
                     if (cliArgs.InitialPrinciple < 500)
                         Console.WriteLine(
-                            "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Pending Extraction: ${3:N2}, Amount Extracted: ${4:N2}, Total: ${5:N2}",
+                            "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Pending Extraction: ${3:N2} | Amount Extracted: ${4:N2} | Subtotal: ${5:N2} | Taxes: ${6:N2} | Fees: ${7:N2} | Total: ${8:N2}",
                             DateTime.Today.AddDays(eventArgs.Day), eventArgs.InterestRate, eventArgs.AmountToAdd,
                             eventArgs.AmountPendingExtraction,
-                            eventArgs.AmountExtracted, eventArgs.Total);
+                            eventArgs.AmountExtracted, eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                     else
                     {
                         if (schedules.Count > 0)
                             Console.WriteLine(
-                                "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Additional Investment: ${3:N2}, Total: ${4:N2}",
+                                "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Additional Investment: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
                                 DateTime.Today.AddDays(eventArgs.Day),
                                 eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment - eventArgs.AmountWithdrawn,
-                                eventArgs.Total);
+                                eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                         else
                             Console.WriteLine(
-                                "Date: {0:yyyy-MM-dd}, Interest: {1:P1}, PV*I: ${2:N2}, Total: ${3:N2}",
+                                "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Subtotal: ${3:N2} | Taxes: ${4:N2} | Fees: ${5:N2} | Total: ${6:N2}",
                                 DateTime.Today.AddDays(eventArgs.Day),
-                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Total);
+                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                     }
+
+                    last = eventArgs;
                 };
 
                 Calc.DateChanged += (_, date) =>
@@ -70,6 +75,8 @@ namespace DefiCalc.CLI
                 Console.WriteLine("-----------Settings----------------");
                 Console.WriteLine("Days: {0}", cliArgs.Days);
                 Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
+                if (cliArgs.InitialInvestment != cliArgs.InitialPrinciple)
+                    Console.WriteLine("Initial Investment: ${0:N2}", cliArgs.InitialInvestment);
                 if (schedules.Count > 0)
                     Console.WriteLine("-----------Schedule----------------");
                 else
@@ -88,62 +95,12 @@ namespace DefiCalc.CLI
                     Console.WriteLine("-----------------------------------");
                 }
 
-                var total = Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, schedules);
+                Calc.Calc(cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, schedules);
                 Console.WriteLine("-----------------------------------");
-                Console.WriteLine("Subtotal:      ${0:N2}", total);
-                double taxRate;
-                double flatTax;
-                const double bracket1 = 10275D;
-                const double bracket2 = 41775D;
-                const double bracket3 = 89075D;
-                const double bracket4 = 170050D;
-                const double bracket5 = 215950D;
-                const double bracket6 = 539900D;
-                double bracket;
-                switch (total)
-                {
-                    case > bracket6:
-                        taxRate = 0.37D;
-                        flatTax = 162718D;
-                        bracket = bracket6;
-                        break;
-                    case > bracket5:
-                        taxRate = 0.35D;
-                        flatTax = 49335.50D;
-                        bracket = bracket5;
-                        break;
-                    case > bracket4:
-                        taxRate = 0.32D;
-                        flatTax = 34647.50D;
-                        bracket = bracket4;
-                        break;
-                    case > bracket3:
-                        taxRate = 0.24D;
-                        flatTax = 15213.50D;
-                        bracket = bracket3;
-                        break;
-                    case > bracket2:
-                        taxRate = 0.22D;
-                        flatTax = 4807.50D;
-                        bracket = bracket2;
-                        break;
-                    case > bracket1:
-                        taxRate = 0.12D;
-                        flatTax = 1027.50D;
-                        bracket = bracket1;
-                        break;
-                    default:
-                        taxRate = 0.10D;
-                        flatTax = 0D;
-                        bracket = 0D;
-                        break;
-                }
-
-                var taxes = (total - bracket) * taxRate + flatTax;
-                Console.WriteLine("Tax:           ${0:N2}", taxes);
-                var coinbase = total * 0.01D + 4.95D;
-                Console.WriteLine("Coinbase Fees: ${0:N2}", coinbase);
-                Console.WriteLine("Total:         ${0:N2}", total - taxes - coinbase);
+                Console.WriteLine("Subtotal:      ${0:N2}", last.Subtotal);
+                Console.WriteLine("Tax:           ${0:N2}", last.Taxes);
+                Console.WriteLine("Coinbase Fees: ${0:N2}", last.Fees);
+                Console.WriteLine("Total:         ${0:N2}", last.Total);
             });
         }
     }

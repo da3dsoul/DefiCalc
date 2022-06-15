@@ -9,6 +9,9 @@
         public double AmountExtracted { get; set; }
         public double AmountWithdrawn { get; set; }
         public double AdditionalInvestment { get; set; }
+        public double Subtotal { get; set; }
+        public double Taxes { get; set; }
+        public double Fees { get; set; }
         public double Total { get; set; }
     }
 }

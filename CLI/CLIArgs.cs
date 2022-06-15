@@ -19,6 +19,9 @@ namespace DefiCalc.CLI
         [Option(HelpText = "Initial Investment Amount")]
         public double InitialPrinciple { get; set; }
         
+        [Option(HelpText = "Initial Investment Amount (for tax purposes, you don't pay tax on initial investment, only 'Capital Gains')")]
+        public double InitialInvestment { get; set; }
+        
         [Option(HelpText = "Path to a json with the schedule")]
         public string SchedulePath { get; set; }
     }
