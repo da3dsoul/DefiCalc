@@ -29,5 +29,8 @@ namespace DefiCalc.CLI
         
         [Option(HelpText = "Path to a json with the schedule")]
         public string SchedulePath { get; set; }
+
+        [Option(HelpText = "Log, csv, or table")]
+        public OutputFormat OutputFormat { get; set; } = OutputFormat.Log;
     }
 }

@@ -16,7 +16,7 @@ namespace DefiCalc.Core
 
             for (var i = 0; i < days; i++)
             {
-                var date = startDate.AddDays(i + 1);
+                var date = startDate.AddDays(i);
                 DateChanged?.Invoke(null, date);
                 var interest = GetInterestRate(total);
                 var add = total * interest;
@@ -50,7 +50,7 @@ namespace DefiCalc.Core
                 var fees = GetFees(total);
                 DayCalculated?.Invoke(null, new DayCalculatedEventArgs
                 {
-                    Day = i + 1,
+                    Day = i,
                     InterestRate = interest,
                     AmountToAdd = add,
                     AmountPendingExtraction = simple,
