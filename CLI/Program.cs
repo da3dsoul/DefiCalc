@@ -49,11 +49,21 @@ namespace DefiCalc.CLI
                     else
                     {
                         if (schedules.Count > 0)
-                            Console.WriteLine(
-                                "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Additional Investment: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
-                                startDate.AddDays(eventArgs.Day),
-                                eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AdditionalInvestment - eventArgs.AmountWithdrawn,
-                                eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
+                        {
+                            var addInv = eventArgs.AdditionalInvestment - eventArgs.AmountWithdrawn;
+                            if (addInv < 0)
+                                Console.WriteLine(
+                                    "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Withdrawn: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
+                                    startDate.AddDays(eventArgs.Day),
+                                    eventArgs.InterestRate, eventArgs.AmountToAdd, Math.Abs(addInv),
+                                    eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
+                            else
+                                Console.WriteLine(
+                                    "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Additional Invested: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
+                                    startDate.AddDays(eventArgs.Day),
+                                    eventArgs.InterestRate, eventArgs.AmountToAdd, addInv,
+                                    eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
+                        }
                         else
                             Console.WriteLine(
                                 "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Subtotal: ${3:N2} | Taxes: ${4:N2} | Fees: ${5:N2} | Total: ${6:N2}",
@@ -77,19 +87,18 @@ namespace DefiCalc.CLI
                 Console.WriteLine("Start Date: {0:yyyy-MM-dd}", startDate);
                 Console.WriteLine("Days: {0}", cliArgs.Days);
                 Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
-                if (cliArgs.InitialInvestment != cliArgs.InitialPrinciple)
+                if (Math.Abs(cliArgs.InitialInvestment - cliArgs.InitialPrinciple) > 0.001)
                     Console.WriteLine("Initial Investment: ${0:N2}", cliArgs.InitialInvestment);
-                if (schedules.Count > 0)
-                    Console.WriteLine("-----------Schedule----------------");
-                else
-                    Console.WriteLine("-----------------------------------");
+                Console.WriteLine(schedules.Count > 0
+                    ? "-----------Schedule----------------"
+                    : "-----------------------------------");
                 foreach (var investmentSchedule in schedules)
                 {
-                    if (investmentSchedule.Amount > 0)
+                    if (investmentSchedule.Amount > 0 || investmentSchedule.WithdrawAmount == 0)
                         Console.WriteLine("  Amount: ${0:N2}", investmentSchedule.Amount);
                     if (investmentSchedule.WithdrawAmount > 0)
                         Console.WriteLine("  Withdraw Amount: ${0:N2}", investmentSchedule.WithdrawAmount);
-                    Console.WriteLine("  Start Date: {0:yyyy-MM-dd}", investmentSchedule.StartDate);
+                    Console.WriteLine(investmentSchedule.Period == 0 ? "  Date: {0:yyyy-MM-dd}" : "  Start Date: {0:yyyy-MM-dd}", investmentSchedule.StartDate);
                     if (investmentSchedule.Period != 0)
                         Console.WriteLine("  Period: {0} days", investmentSchedule.Period);
                     if (investmentSchedule.EndDate != null)

@@ -1,8 +1,10 @@
 ﻿using System;
 using CommandLine;
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace DefiCalc.CLI
 {
+    // ReSharper disable once ClassNeverInstantiated.Global
     public class CLIArgs
     {
         [Option(HelpText = "The date to start calculating from")]
