@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CommandLine;
-using DefiCalc.Core;
+using DefiCalc.Core.Models;
 using Calc = DefiCalc.Core.Main;
 
 namespace DefiCalc.CLI
@@ -13,27 +13,46 @@ namespace DefiCalc.CLI
     {
         public static void Main(string[] args)
         {
-            var result = Parser.Default.ParseArguments<CLIArgs>(args);
+            var parser = new Parser( o =>
+                {
+                    o.CaseSensitive = false;
+                    o.CaseInsensitiveEnumValues = true;
+                });
+            var result = parser.ParseArguments<CLIArgs>(args);
             result.WithParsed(cliArgs =>
             {
                 var startDate = cliArgs.StartDate ?? DateTime.Today;
                 if (cliArgs.InitialInvestment == 0) cliArgs.InitialInvestment = cliArgs.InitialPrinciple;
-                List<InvestmentSchedule> schedules;
+                ScheduleModel model;
                 if (cliArgs.SchedulePath == null)
                 {
-                    schedules = new List<InvestmentSchedule>
+                    model = new ScheduleModel
                     {
-                        new()
+                        Schedules = new InvestmentSchedule[]
                         {
-                            Amount = cliArgs.ReinvestmentAmount, Period = cliArgs.ReinvestmentPeriod,
-                            StartDate = startDate.AddDays(cliArgs.ReinvestmentOffset)
-                        }
+                            new()
+                            {
+                                Amount = cliArgs.ReinvestmentAmount, Period = cliArgs.ReinvestmentPeriod,
+                                StartDate = startDate.AddDays(cliArgs.ReinvestmentOffset)
+                            }
+                        },
+                        Pledges = Array.Empty<DateRange>()
                     };
                 }
                 else
                 {
-                    schedules = JsonSerializer.Deserialize<List<InvestmentSchedule>>(
-                        File.ReadAllText(cliArgs.SchedulePath)) ?? new List<InvestmentSchedule>();
+                    var opt = new JsonSerializerOptions
+                    {
+                        AllowTrailingCommas = true,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+                        ReadCommentHandling = JsonCommentHandling.Skip,
+                        PropertyNameCaseInsensitive = true,
+                    };
+                    model = JsonSerializer.Deserialize<ScheduleModel>(File.ReadAllText(cliArgs.SchedulePath), opt) ?? new ScheduleModel
+                    {
+                        Schedules = Array.Empty<InvestmentSchedule>(),
+                        Pledges = Array.Empty<DateRange>()
+                    };
                 }
 
                 DayCalculatedEventArgs last = null;
@@ -58,7 +77,7 @@ namespace DefiCalc.CLI
                     }
                     else
                     {
-                        if (schedules.Count > 0)
+                        if (model.Schedules.Length > 0)
                         {
                             var addInv = eventArgs.AdditionalInvestment - eventArgs.AmountWithdrawn;
                             if (addInv < 0)
@@ -66,7 +85,7 @@ namespace DefiCalc.CLI
                                 var format = cliArgs.OutputFormat switch
                                 {
                                     OutputFormat.Log =>
-                                        "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Withdrawn: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
+                                        "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Extracted: ${3:N2} | Withdrawn: ${4:N2} | Subtotal: ${5:N2} | Taxes: ${6:N2} | Fees: ${7:N2} | Total: ${8:N2}",
                                     OutputFormat.Csv =>
                                         "{0:yyyy-MM-dd},{1:P1},\"${2:N2}\",\"-${3:N2}\",\"${4:N2}\",\"${5:N2}\",\"${6:N2}\",\"${7:N2}\"",
                                     OutputFormat.Table =>
@@ -76,7 +95,7 @@ namespace DefiCalc.CLI
                                 Console.WriteLine(
                                     format,
                                     startDate.AddDays(eventArgs.Day),
-                                    eventArgs.InterestRate, eventArgs.AmountToAdd, Math.Abs(addInv),
+                                    eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AmountExtracted, Math.Abs(addInv),
                                     eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                             }
                             else
@@ -84,7 +103,7 @@ namespace DefiCalc.CLI
                                 var format = cliArgs.OutputFormat switch
                                 {
                                     OutputFormat.Log =>
-                                        "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Additional Invested: ${3:N2} | Subtotal: ${4:N2} | Taxes: ${5:N2} | Fees: ${6:N2} | Total: ${7:N2}",
+                                        "Date: {0:yyyy-MM-dd} | Interest: {1:P1} | PV*I: ${2:N2} | Extracted: ${3:N2} | Additional Invested: ${4:N2} | Subtotal: ${5:N2} | Taxes: ${6:N2} | Fees: ${7:N2} | Total: ${8:N2}",
                                     OutputFormat.Csv =>
                                         "{0:yyyy-MM-dd},{1:P1},\"${2:N2}\",\"${3:N2}\",\"${4:N2}\",\"${5:N2}\",\"${6:N2}\",\"${7:N2}\"",
                                     OutputFormat.Table =>
@@ -94,7 +113,7 @@ namespace DefiCalc.CLI
                                 Console.WriteLine(
                                     format,
                                     startDate.AddDays(eventArgs.Day),
-                                    eventArgs.InterestRate, eventArgs.AmountToAdd, addInv,
+                                    eventArgs.InterestRate, eventArgs.AmountToAdd, eventArgs.AmountExtracted, addInv,
                                     eventArgs.Subtotal, eventArgs.Taxes, eventArgs.Fees, eventArgs.Total);
                             }
                         }
@@ -132,37 +151,36 @@ namespace DefiCalc.CLI
                 switch (cliArgs.OutputFormat)
                 {
                     case OutputFormat.Log:
-                        WriteHeaderLog(cliArgs, startDate, schedules);
-                        Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, schedules);
+                        WriteHeaderLog(cliArgs, startDate, model);
+                        Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, model);
                         WriteFooterLog(last);        
                         break;
                     case OutputFormat.Csv:
-                        WriteHeaderCsv(cliArgs, schedules);
-                        Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, schedules);
+                        WriteHeaderCsv(cliArgs, model);
+                        Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, model);
                         break;
                     case OutputFormat.Table:
-                        WriteHeaderTable(cliArgs, schedules);
-                        Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, schedules);
+                        WriteHeaderTable(cliArgs, model);
+                        Calc.Calc(startDate, cliArgs.Days, cliArgs.InitialPrinciple, cliArgs.InitialInvestment, model);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-                
             });
         }
 
-        private static void WriteHeaderCsv(CLIArgs cliArgs, List<InvestmentSchedule> schedules)
+        private static void WriteHeaderCsv(CLIArgs cliArgs, ScheduleModel model)
         {
             if (cliArgs.InitialPrinciple < 500)
                 Console.WriteLine(
                     "Date,Interest,\"PV*I\",\"Pending Extraction\",\"Amount Extracted\",Subtotal,Taxes,Fees,Total");
             else
-                Console.WriteLine(schedules.Count > 0
+                Console.WriteLine(model.Schedules.Length > 0
                     ? "Date,Interest,\"PV*I\",\"Additional Invested\",Subtotal,Taxes,Fees,Total"
                     : "Date,Interest,\"PV*I\",Subtotal,Taxes,Fees,Total");
         }
 
-        private static void WriteHeaderTable(CLIArgs cliArgs, List<InvestmentSchedule> schedules)
+        private static void WriteHeaderTable(CLIArgs cliArgs, ScheduleModel model)
         {
             if (cliArgs.InitialPrinciple < 500)
             {
@@ -171,7 +189,7 @@ namespace DefiCalc.CLI
             }
             else
             {
-                if (schedules.Count > 0)
+                if (model.Schedules.Length > 0)
                 {
                     Console.WriteLine("|Date|Interest|PV*I|Additional Invested|Subtotal|Taxes|Fees|Total|");
                     Console.WriteLine("|----|--------|----|-------------------|--------|-----|----|-----|");
@@ -184,7 +202,7 @@ namespace DefiCalc.CLI
             }
         }
 
-        private static void WriteHeaderLog(CLIArgs cliArgs, DateTime startDate, List<InvestmentSchedule> schedules)
+        private static void WriteHeaderLog(CLIArgs cliArgs, DateTime startDate, ScheduleModel model)
         {
             Console.WriteLine("-----------Settings----------------");
             Console.WriteLine("Start Date: {0:yyyy-MM-dd}", startDate);
@@ -192,20 +210,35 @@ namespace DefiCalc.CLI
             Console.WriteLine("Initial Principle (PV): ${0:N2}", cliArgs.InitialPrinciple);
             if (Math.Abs(cliArgs.InitialInvestment - cliArgs.InitialPrinciple) > 0.001)
                 Console.WriteLine("Initial Investment: ${0:N2}", cliArgs.InitialInvestment);
-            Console.WriteLine(schedules.Count > 0
-                ? "-----------Schedule----------------"
-                : "-----------------------------------");
-            foreach (var investmentSchedule in schedules)
+            Console.WriteLine(model.Schedules.Length > 0
+                ? "-----------Schedules---------------"
+                : model.Pledges.Length > 0
+                    ? "-----------Pledges-----------------"
+                    : "-----------------------------------");
+            for (var i = 0; i < model.Schedules.Length; i++)
             {
+                var investmentSchedule = model.Schedules[i];
                 if (investmentSchedule.Amount > 0 || investmentSchedule.WithdrawAmount == 0)
                     Console.WriteLine("  Amount: ${0:N2}", investmentSchedule.Amount);
                 if (investmentSchedule.WithdrawAmount > 0)
                     Console.WriteLine("  Withdraw Amount: ${0:N2}", investmentSchedule.WithdrawAmount);
-                Console.WriteLine(investmentSchedule.Period == 0 ? "  Date: {0:yyyy-MM-dd}" : "  Start Date: {0:yyyy-MM-dd}", investmentSchedule.StartDate);
+                Console.WriteLine(
+                    investmentSchedule.Period == 0 ? "  Date: {0:yyyy-MM-dd}" : "  Start Date: {0:yyyy-MM-dd}",
+                    investmentSchedule.StartDate);
                 if (investmentSchedule.Period != 0)
                     Console.WriteLine("  Period: {0} days", investmentSchedule.Period);
                 if (investmentSchedule.EndDate != null)
                     Console.WriteLine("  End Date: {0:yyyy-MM-dd}", investmentSchedule.EndDate);
+                Console.WriteLine(i == model.Schedules.Length - 1 && model.Pledges.Length > 0
+                    ? "-----------Pledges-----------------"
+                    : "-----------------------------------");
+            }
+
+            foreach (var dateRange in model.Pledges)
+            {
+                Console.WriteLine("  Start Date: {0:yyyy-MM-dd}", dateRange.StartDate);
+                if (dateRange.EndDate != null)
+                    Console.WriteLine("  End Date: {0:yyyy-MM-dd}", dateRange.EndDate);
                 Console.WriteLine("-----------------------------------");
             }
         }

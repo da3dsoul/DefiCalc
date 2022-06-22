@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
+using DefiCalc.Core.Models;
 
 namespace DefiCalc.Core
 {
@@ -8,37 +9,50 @@ namespace DefiCalc.Core
         public static EventHandler<DayCalculatedEventArgs> DayCalculated;
         public static EventHandler<DateTime> DateChanged;
 
-        public static double Calc(DateTime startDate, int days, double initialPrinciple, double initialInvestment, List<InvestmentSchedule> schedules)
+        public static double Calc(DateTime startDate, int days, double initialPrinciple, double initialInvestment, ScheduleModel model)
         {
             var total = initialPrinciple;
             var simple = 0D;
             var totalInvested = initialInvestment;
+            var nextTier = false;
 
             for (var i = 0; i < days; i++)
             {
-                var date = startDate.AddDays(i);
+                var date = startDate.AddDays(i+1);
                 DateChanged?.Invoke(null, date);
-                var interest = GetInterestRate(total);
-                var add = total * interest;
-                var extracted = 0D;
-                if (add + simple >= 10D)
-                {
-                    total += add + simple;
-                    extracted = add + simple;
-                    simple = 0D;
-                }
-                else
-                    simple += add;
-
+                
                 var additional = 0D;
                 var withdrawn = 0D;
-                foreach (var schedule in schedules)
+                foreach (var schedule in model.Schedules)
                 {
                     if (date < schedule.StartDate || (schedule.EndDate != null && date >= schedule.EndDate.Value)) continue;
                     if (schedule.Period != 0 && (date - schedule.StartDate).TotalDays % schedule.Period != 0) continue;
                     if (schedule.Period == 0 && date != schedule.StartDate) continue;
                     additional += schedule.Amount;
                     withdrawn += schedule.WithdrawAmount;
+                }
+
+                var interest = GetInterestRate(total);
+                nextTier |= GetInterestRate(total + additional - withdrawn) > interest;
+                var pledged = model.Pledges.Any(a => a.StartDate <= date && a.EndDate > date);
+                if (pledged) interest *= 2D;
+
+                var add = total * interest;
+                var extracted = 0D;
+                if (!nextTier && pledged)
+                {
+                    simple += add;
+                }
+                else
+                {
+                    if (add + simple >= 10D)
+                    {
+                        total += add + simple;
+                        extracted = add + simple;
+                        simple = 0D;
+                    }
+                    else
+                        simple += add;
                 }
 
                 totalInvested += additional;
@@ -50,7 +64,7 @@ namespace DefiCalc.Core
                 var fees = GetFees(total);
                 DayCalculated?.Invoke(null, new DayCalculatedEventArgs
                 {
-                    Day = i,
+                    Day = i+1,
                     InterestRate = interest,
                     AmountToAdd = add,
                     AmountPendingExtraction = simple,
@@ -62,6 +76,8 @@ namespace DefiCalc.Core
                     Fees = fees,
                     Total = total - taxes - fees
                 });
+
+                if (model.Pledges.Any(a => a.EndDate == date)) nextTier = false;
             }
 
             return total;

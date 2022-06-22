@@ -1,4 +1,4 @@
-﻿namespace DefiCalc.Core
+﻿namespace DefiCalc.Core.Models
 {
     public class DayCalculatedEventArgs
     {
