@@ -48,11 +48,32 @@ namespace DefiCalc.CLI
                         ReadCommentHandling = JsonCommentHandling.Skip,
                         PropertyNameCaseInsensitive = true,
                     };
-                    model = JsonSerializer.Deserialize<ScheduleModel>(File.ReadAllText(cliArgs.SchedulePath), opt) ?? new ScheduleModel
+                    try
                     {
-                        Schedules = Array.Empty<InvestmentSchedule>(),
-                        Pledges = Array.Empty<DateRange>()
-                    };
+                        model =
+                            JsonSerializer.Deserialize<ScheduleModel>(File.ReadAllText(cliArgs.SchedulePath), opt) ??
+                            new ScheduleModel
+                            {
+                                Schedules = Array.Empty<InvestmentSchedule>(),
+                                Pledges = Array.Empty<DateRange>()
+                            };
+                    }
+                    catch
+                    {
+                        model = new ScheduleModel();
+                    }
+
+                    try
+                    {
+                        model.Schedules ??= JsonSerializer.Deserialize<InvestmentSchedule[]>(File.ReadAllText(cliArgs.SchedulePath), opt);
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+
+                    model.Schedules ??= Array.Empty<InvestmentSchedule>();
+                    model.Pledges ??= Array.Empty<DateRange>();
                 }
 
                 DayCalculatedEventArgs last = null;
